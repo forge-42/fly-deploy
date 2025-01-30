@@ -14,8 +14,7 @@ retry () {
   if [[ "$DRY_RUN" == "1" ]]; then
     dry_run_echo "$group_name ($count/$retries)" $@
   else
-    notice "Using command: '$@'"
-
+    echo -e "Using command: '$@'"
     until "$@"; do
       local exit=$?
 
