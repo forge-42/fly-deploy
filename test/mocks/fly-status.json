@@ -1,0 +1,14 @@
+{
+	"Hostname": "foo-bar.fly.dev",
+	"ID": "foo-bar-app-id",
+	"Machines": [
+		{
+			"id": "6ef44333-c89b-46bf-af9b-69d01644fd3e",
+			"name": "fly-machine-name-1"
+		},
+		{
+			"id": "7f567e47-a9c3-4eea-a795-38dcc02fc610",
+			"name": "fly-machine-name-2"
+		}
+	]
+}

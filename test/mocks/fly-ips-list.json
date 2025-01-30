@@ -1,0 +1,20 @@
+[
+	{
+		"ID": "ip_asdfasdfasdf",
+		"Address": "c791:f4bd:4ce0:807e:b999:63b6:c2f6:9c11",
+		"Type": "v6",
+		"Region": "global",
+		"CreatedAt": "2025-01-22T16:37:41Z",
+		"ServiceName": "",
+		"Network": null
+	},
+	{
+		"ID": "",
+		"Address": "66.200.100.200",
+		"Type": "shared_v4",
+		"Region": "",
+		"CreatedAt": "0001-01-01T00:00:00Z",
+		"ServiceName": "",
+		"Network": null
+	}
+]
