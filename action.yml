@@ -1,31 +1,19 @@
 name: 'fly-deploy'
 description: 'Deploys to fly.io'
 inputs:
-  workspace_name:
+  app_name_prefix:
     required: false
-    description: "The name of the workspace to deploy. This is used to find the folder of the workspace by searching name fields in all package.json files."
-  use_isolated_workspace:
-    required: false
-    description: "Whether to set the current working directory to the found workspace path. Defaults to false. You only need to change this if you want to deploy a folder in isolation and dont need any of the other workspaces. For monorepos keep this should as false."
-    default: "false"
+    description: "A prefix for the fly app name. This is useful if you want to use automatic app_name generation based on the workspace name, but want to add a prefix to the app name (like $GITHUB_REPOSITORY_OWNER)"
   app_name:
     required: false
-    description: "The name of the fly app to deploy."
+    description: "The name of the fly app to deploy. If not set, the app name is generated based on the workspace name and the app_name_prefix and app_name_suffix inputs. If set, this overrides the automatic app name generation and prefix/suffix inputs are ignored."
+  app_suffix:
+    required: false
+    description: "A suffix for the fly app name. This is useful if you want to use the automatic app_name generation based on the workspace name, but want to add a suffix to the app name (like 'production', 'pre-production', 'preview', etc.)"
   config_file_path:
     required: false
     description: "Relative workspace path of the fly config file. Defaults to './fly.toml'"
     default: "./fly.toml"
-  attach_consul:
-    required: false
-    description: "Whether to attach a consul cluster to the app, for instance if you want to use SQLite with litefs. Defaults to false"
-    default: "false"
-  attach_postgres:
-    required: false
-    default: "false"
-    description: "Boolean string (true|false) to indicate whether to attach a postgres cluster to the app. Make sure to set FLY_REGION, otherwise the postgres cluster creation will fail."
-  attach_existing_postgres:
-    required: false
-    description: "Name of an existing postgres cluster to attach to the app. The action will not create it for you if it doesnt exist - If you want to create it, use the 'attach_postgres' action input instead."
   secrets:
     required: false
     description: "A list of secrets to set on the fly app. The format is 'key=value', newline separated. You can use this to set secrets on the fly app."
@@ -38,6 +26,17 @@ inputs:
   build_secrets:
     required: false
     description: "A list of secrets to set on the fly app. The format is 'key=value', newline separated. You can use this to set secrets available to the docker build command, only available during the build phase."
+  workspace_name:
+    required: false
+    description: "The name of the workspace to deploy. This is used to find the folder of the workspace by searching the 'name' field in all package.json files recursively. Defaults to the 'name' in of the package.json found in the repository root."
+  use_isolated_workspace:
+    required: false
+    description: "Whether to set the current working directory to the found workspace path. Defaults to false. You only need to change this if you want to deploy a folder in isolation and dont need any of the other workspaces. For monorepos keep this should as false."
+    default: "false"
+  attach_consul:
+    required: false
+    description: "Whether to attach a consul cluster to the app, for instance if you want to use SQLite with litefs. Defaults to false"
+    default: "false"
   private:
     required: false
     description: "Boolean string (true|false) to indicate whether to enable flycast and only add a private IPv6 address to the app. Defaults to false."
@@ -59,8 +58,6 @@ outputs:
     description: "The public IPs of the app."
   private_ips:
     description: "The private IPs of app."
-  postgres_cluster_name:
-    description: "The name of the postgres cluster app that was deployed."
   workspace_name:
     description: "The name of the workspace that was deployed."
   workspace_path:

@@ -42,6 +42,13 @@ process_inputs () {
   fi
   debug "default_app_name_prefix=$default_app_name_prefix"
 
+  # Handle if the user wants to set a custom suffix (like "production", "pre-production", etc.) for the app name
+  local default_app_name_suffix=""
+  if [[ -n "${INPUT_APP_NAME_SUFFIX,,}" ]]; then
+    default_app_name_suffix="${INPUT_APP_NAME_SUFFIX,,}"
+  fi
+  debug "default_app_name_suffix=$default_app_name_suffix"
+
   if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
     local pr_number=$(jq -r .number $GITHUB_EVENT_PATH)
     local default_app_name="${workspace_name}-pr-${pr_number}"
@@ -59,9 +66,14 @@ process_inputs () {
     local default_app_name="${workspace_name}-${GITHUB_EVENT_NAME}"
   fi
 
-  # If the user has set a prefix for the app name, we prepend it to the default app name.
+  # If the user has set a prefix for the app name, we prepend it to the beginning of default app name.
   if [[ -n "$default_app_name_prefix" ]]; then
     default_app_name="${default_app_name_prefix}-${default_app_name}"
+  fi
+
+  # If the user has set a suffix for the app name, we append it to the end of the default app name.
+  if [[ -n "$default_app_name_suffix" ]]; then
+    default_app_name="${default_app_name}-${default_app_name_suffix}"
   fi
   debug "default_app_name=$default_app_name"
 
