@@ -71,15 +71,15 @@ if [[ "$USE_ISOLATED_WORKSPACE" == "true" ]]; then
   cd "$WORKSPACE_PATH"
 fi
 
-if [[ -n "$ENV_VARS_ARGUMENTS" ]]; then
+if [[ "$ENV_VARS_COUNT" != "0" ]]; then
   notice "Will set '$ENV_VARS_COUNT' environment variables on '$APP_NAME': '$ENV_VARS_NAMES'"
 fi
 
-if [[ -n "$BUILD_ARGS_ARGUMENTS" ]]; then
+if [[ "$BUILD_ARGS_COUNT" != "0" ]]; then
   notice "Will add '$BUILD_ARGS_COUNT' additional custom build-args on '$APP_NAME': '$BUILD_ARGS_NAMES'"
 fi
 
-if [[ -n "$BUILD_SECRETS_ARGUMENTS" ]]; then
+if [[ "$BUILD_SECRETS_ARGUMENTS" != "0" ]]; then
   notice "Will add '$BUILD_SECRETS_COUNT' custom build-secrets on '$APP_NAME': '$BUILD_SECRETS_NAMES'"
 fi
 
@@ -126,10 +126,10 @@ declare -rg machine_ids=$(jq -r '[.Machines[].id] | join(",")' $fly_status_file)
 declare -rg public_ips=$(jq -r '[.[] | select(.Type == "shared_v4" or .Type == "v4" or .Type == "v6") | .Address] | join(",")' $fly_ips_list_file)
 declare -rg private_ips=$(jq -r '[.[] | select(.Type == "private_v6") | .Address] | join(",")' $fly_ips_list_file)
 
-notice app_hostname=$app_hostname
+debug app_hostname=$app_hostname
 echo "app_hostname=$app_hostname" >> $GITHUB_OUTPUT
 
-notice app_url=$app_url
+debug app_url=$app_url
 echo "app_url=https://$app_hostname" >> $GITHUB_OUTPUT
 
 debug app_id=$app_id
@@ -147,7 +147,7 @@ echo "public_ips=$public_ips" >> $GITHUB_OUTPUT
 debug private_ips=$private_ips
 echo "private_ips=$private_ips" >> $GITHUB_OUTPUT
 
-notice app_name=$APP_NAME
+debug app_name=$APP_NAME
 echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
 
 debug workspace_name=$WORKSPACE_NAME
