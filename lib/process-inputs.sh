@@ -8,7 +8,7 @@ process_inputs () {
   # When workspace_name is not set, we assume the current "root" directory of the repository is the workspace_path
   # and we use the "name" from the package.json in that directory as workspace_name.
   if [[ -z "$INPUT_WORKSPACE_NAME" ]]; then
-    notice "workspace_name not set. Using current directory as workspace_path and 'name' from ./package.json as workspace_name"
+    notice "workspace_name not set. Using current working directory '.' as workspace_path and 'name' from ./package.json as workspace_name"
     local workspace_path_relative="."
     local workspace_path="$(pwd)"
     local workspace_name="$(jq -rS '.name' ./package.json)"
@@ -37,14 +37,14 @@ process_inputs () {
 
   # Handle if the user wants to set a custom prefix (like $GITHUB_REPOSITORY_OWNER or $GITHUB_REPOSITORY) for the app name
   local default_app_name_prefix=""
-  if [[ -n "${INPUT_APP_NAME_PREFIX,,}" ]]; then
+  if [[ -n "$INPUT_APP_NAME_PREFIX" ]]; then
     default_app_name_prefix="${INPUT_APP_NAME_PREFIX,,}"
   fi
   debug "default_app_name_prefix=$default_app_name_prefix"
 
   # Handle if the user wants to set a custom suffix (like "production", "pre-production", etc.) for the app name
   local default_app_name_suffix=""
-  if [[ -n "${INPUT_APP_NAME_SUFFIX,,}" ]]; then
+  if [[ -n "$INPUT_APP_NAME_SUFFIX" ]]; then
     default_app_name_suffix="${INPUT_APP_NAME_SUFFIX,,}"
   fi
   debug "default_app_name_suffix=$default_app_name_suffix"
@@ -58,6 +58,8 @@ process_inputs () {
     # e.g. base-stack-branch-main
     # e.g. base-stack-tag-v1.0.0
     local default_app_name="${workspace_name}-${GITHUB_REF_TYPE}-${GITHUB_REF_NAME}"
+  elif [[ "${GITHUB_EVENT_NAME}" == "workflow-dispatch" ]]; then
+    local default_app_name="${workspace_name}"
   else
     if [[ -z "$INPUT_APP_NAME" ]]; then
       # If no app_name is set, we show a warning that even is unhandled and generated default app_name might not be what the user expects.
@@ -106,8 +108,8 @@ process_inputs () {
 
   # config file path is relative to the workspace_path, so we need to resolve it to an absolute path.
   if [[ -z "$INPUT_CONFIG_FILE_PATH" ]]; then
-    notice "config_file_path NOT set. Using workspace_path='$workspace_path' and 'fly.toml' as default."
     local raw_config_file_path="$workspace_path/fly.toml"
+    notice "config_file_path NOT set. Trying to use fallback '${raw_config_file_path}'."
   else
     local raw_config_file_path="$workspace_path/$INPUT_CONFIG_FILE_PATH"
   fi
@@ -316,7 +318,7 @@ process_inputs () {
   debug "WORKSPACE_NAME=$WORKSPACE_NAME"
   debug "WORKSPACE_PATH=$WORKSPACE_PATH"
   debug "WORKSPACE_PATH_RELATIVE=$WORKSPACE_PATH_RELATIVE"
-  debug "FLY_ORG=$FLY_ORG"
+  notice "FLY_ORG=$FLY_ORG"
   debug "SECRETS_COUNT=$SECRETS_COUNT"
   debug "SECRETS_NAMES=$SECRETS_NAMES"
   debug "ENV_VARS_COUNT=$ENV_VARS_COUNT"
@@ -327,12 +329,12 @@ process_inputs () {
   debug "BUILD_ARGS_ARGUMENTS=$BUILD_ARGS_ARGUMENTS"
   debug "BUILD_SECRETS_COUNT=$BUILD_SECRETS_COUNT"
   debug "BUILD_SECRETS_NAMES=$BUILD_SECRETS_NAMES"
-  debug "APP_NAME=$APP_NAME"
+  notice "APP_NAME=$APP_NAME"
   debug "ATTACH_CONSUL=$ATTACH_CONSUL"
   debug "PRIVATE=$PRIVATE"
   debug "PRIVATE_ARGUMENTS=$PRIVATE_ARGUMENTS"
   debug "USE_ISOLATED_WORKSPACE=$USE_ISOLATED_WORKSPACE"
-  debug "CONFIG_FILE_PATH=$CONFIG_FILE_PATH"
+  notice "CONFIG_FILE_PATH=$CONFIG_FILE_PATH"
 
   group_end
 }

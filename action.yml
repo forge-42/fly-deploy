@@ -13,7 +13,6 @@ inputs:
   config_file_path:
     required: false
     description: "Relative workspace path of the fly config file. Defaults to './fly.toml'"
-    default: "./fly.toml"
   secrets:
     required: false
     description: "A list of secrets to set on the fly app. The format is 'key=value', newline separated. You can use this to set secrets on the fly app."

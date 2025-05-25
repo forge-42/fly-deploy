@@ -132,28 +132,28 @@ echo "app_hostname=$app_hostname" >> $GITHUB_OUTPUT
 notice app_url=$app_url
 echo "app_url=https://$app_hostname" >> $GITHUB_OUTPUT
 
-notice app_id=$app_id
+debug app_id=$app_id
 echo "app_id=$app_id" >> $GITHUB_OUTPUT
 
-notice machine_names=$machine_names
+debug machine_names=$machine_names
 echo "machine_names=$machine_names" >> $GITHUB_OUTPUT
 
-notice machine_ids=$machine_ids
+debug machine_ids=$machine_ids
 echo "machine_ids=$machine_ids" >> $GITHUB_OUTPUT
 
-notice public_ips=$public_ips
+debug public_ips=$public_ips
 echo "public_ips=$public_ips" >> $GITHUB_OUTPUT
 
-notice private_ips=$private_ips
+debug private_ips=$private_ips
 echo "private_ips=$private_ips" >> $GITHUB_OUTPUT
 
 notice app_name=$APP_NAME
 echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
 
-notice workspace_name=$WORKSPACE_NAME
+debug workspace_name=$WORKSPACE_NAME
 echo "workspace_name=$WORKSPACE_NAME" >> $GITHUB_OUTPUT
 
-notice workspace_path=$WORKSPACE_PATH_RELATIVE
+debug workspace_path=$WORKSPACE_PATH_RELATIVE
 echo "workspace_path=$WORKSPACE_PATH_RELATIVE" >> $GITHUB_OUTPUT
 
 echo "### Deployed ${APP_NAME} :rocket:" >> $GITHUB_STEP_SUMMARY
