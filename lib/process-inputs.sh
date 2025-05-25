@@ -49,16 +49,16 @@ process_inputs () {
   fi
   debug "default_app_name_suffix=$default_app_name_suffix"
 
-  if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+  if [[ "${GITHUB_EVENT_NAME,,}" == "pull_request" ]]; then
     local pr_number=$(jq -r .number $GITHUB_EVENT_PATH)
     local default_app_name="${workspace_name}-pr-${pr_number}"
-  elif [[ "${GITHUB_EVENT_NAME}" == "push" || "${GITHUB_EVENT_NAME}" == "create" ]]; then
+  elif [[ "${GITHUB_EVENT_NAME,,}" == "push" || "${GITHUB_EVENT_NAME,,}" == "create" ]]; then
     # <workspace_name>-<ref_type>-<ref_name>
     # e.g. base-stack-branch-bug/some-bugfix
     # e.g. base-stack-branch-main
     # e.g. base-stack-tag-v1.0.0
     local default_app_name="${workspace_name}-${GITHUB_REF_TYPE}-${GITHUB_REF_NAME}"
-  elif [[ "${GITHUB_EVENT_NAME}" == "workflow-dispatch" ]]; then
+  elif [[ "${GITHUB_EVENT_NAME,,}" == "workflow_dispatch" ]]; then
     local default_app_name="${workspace_name}"
   else
     if [[ -z "$INPUT_APP_NAME" ]]; then
@@ -122,7 +122,7 @@ process_inputs () {
   fi
   debug "config_file_path=$config_file_path"
 
-  if [ "${GITHUB_EVENT_NAME}" == "pull_request" ]; then
+  if [ "${GITHUB_EVENT_NAME,,}" == "pull_request" ]; then
     local pr_event_type=$(jq -r .action $GITHUB_EVENT_PATH)
     if [[ "$pr_event_type" == "closed" ]]; then
       error "PR closed event not supported by this action. Use 'https://github.com/forge-42/fly-destroy' action instead."
