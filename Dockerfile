@@ -4,10 +4,9 @@ RUN <<EOF
 apt-get update -qq
 apt-get install -y \
         jq \
-        git \
-        pwgen
+        ca-certificates
 EOF
-COPY --from=flyio/flyctl /flyctl /usr/local/bin/flyctl
+COPY --from=flyio/flyctl:latest /flyctl /usr/local/bin/flyctl
 
 WORKDIR /action
 
