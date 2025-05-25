@@ -109,7 +109,7 @@ process_inputs () {
   # config file path is relative to the workspace_path, so we need to resolve it to an absolute path.
   if [[ -z "$INPUT_CONFIG_FILE_PATH" ]]; then
     local raw_config_file_path="$workspace_path/fly.toml"
-    notice "config_file_path NOT set. Trying to use fallback '${raw_config_file_path}'."
+    notice "config_file_path NOT set. Trying to use fallback '${workspace_path_relative}/fly.toml'."
   else
     local raw_config_file_path="$workspace_path/$INPUT_CONFIG_FILE_PATH"
   fi
@@ -318,7 +318,7 @@ process_inputs () {
   debug "WORKSPACE_NAME=$WORKSPACE_NAME"
   debug "WORKSPACE_PATH=$WORKSPACE_PATH"
   debug "WORKSPACE_PATH_RELATIVE=$WORKSPACE_PATH_RELATIVE"
-  notice "FLY_ORG=$FLY_ORG"
+  debug "FLY_ORG=$FLY_ORG"
   debug "SECRETS_COUNT=$SECRETS_COUNT"
   debug "SECRETS_NAMES=$SECRETS_NAMES"
   debug "ENV_VARS_COUNT=$ENV_VARS_COUNT"
@@ -329,12 +329,12 @@ process_inputs () {
   debug "BUILD_ARGS_ARGUMENTS=$BUILD_ARGS_ARGUMENTS"
   debug "BUILD_SECRETS_COUNT=$BUILD_SECRETS_COUNT"
   debug "BUILD_SECRETS_NAMES=$BUILD_SECRETS_NAMES"
-  notice "APP_NAME=$APP_NAME"
+  debug "APP_NAME=$APP_NAME"
   debug "ATTACH_CONSUL=$ATTACH_CONSUL"
   debug "PRIVATE=$PRIVATE"
   debug "PRIVATE_ARGUMENTS=$PRIVATE_ARGUMENTS"
   debug "USE_ISOLATED_WORKSPACE=$USE_ISOLATED_WORKSPACE"
-  notice "CONFIG_FILE_PATH=$CONFIG_FILE_PATH"
+  debug "CONFIG_FILE_PATH=$CONFIG_FILE_PATH"
 
   group_end
 }

@@ -79,7 +79,7 @@ if [[ "$BUILD_ARGS_COUNT" != "0" ]]; then
   notice "Will add '$BUILD_ARGS_COUNT' additional custom build-args on '$APP_NAME': '$BUILD_ARGS_NAMES'"
 fi
 
-if [[ "$BUILD_SECRETS_ARGUMENTS" != "0" ]]; then
+if [[ "$BUILD_SECRETS_COUNT" != "0" ]]; then
   notice "Will add '$BUILD_SECRETS_COUNT' custom build-secrets on '$APP_NAME': '$BUILD_SECRETS_NAMES'"
 fi
 
