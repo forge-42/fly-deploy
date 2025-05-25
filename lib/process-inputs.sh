@@ -128,11 +128,11 @@ process_inputs () {
     fi
     local pull_request_head_sha=$(jq -r .pull_request.head.sha $GITHUB_EVENT_PATH)
     # We need the HEAD commit SHA of the pull request, which is the commit that is being tested in the pull request.
-    local git_commit_sha="${pull_request_head_sha}"
+    local git_sha="${pull_request_head_sha}"
   else
-    local git_commit_sha="${GITHUB_SHA}"
+    local git_sha="${GITHUB_SHA}"
   fi
-  debug "git_commit_sha=$git_commit_sha"
+  debug "git_sha=$git_sha"
 
   if [[ "${INPUT_ATTACH_CONSUL,,}" != "true" ]]; then
     local attach_consul="false"
@@ -232,7 +232,7 @@ process_inputs () {
   build_args_arguments+="--build-arg APP_NAME=$app_name "
   build_args_arguments+="--build-arg WORKSPACE_NAME=$workspace_name "
   build_args_arguments+="--build-arg WORKSPACE_PATH=$workspace_path_relative "
-  build_args_arguments+="--build-arg GIT_COMMIT_SHA=$git_commit_sha "
+  build_args_arguments+="--build-arg GIT_SHA=$git_sha "
 
   if [[ -n "$INPUT_BUILD_ARGS" ]]; then
     local build_args="$(echo "$INPUT_BUILD_ARGS" | tr '\n' ' ' | tr -s '[:space:]' ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
