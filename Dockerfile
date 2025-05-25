@@ -1,8 +1,6 @@
 # Container image that runs your code
 FROM ubuntu
-RUN <<EOF
-apt-get install -y jq
-EOF
+RUN apt-get install -y jq
 COPY --from=flyio/flyctl /flyctl /usr/local/bin/flyctl
 
 WORKDIR /action
