@@ -7,7 +7,7 @@ inputs:
   app_name:
     required: false
     description: "The name of the fly app to deploy. If not set, the app name is generated based on the workspace name and the app_name_prefix and app_name_suffix inputs. If set, this overrides the automatic app name generation and prefix/suffix inputs are ignored."
-  app_suffix:
+  app_name_suffix:
     required: false
     description: "A suffix for the fly app name. This is useful if you want to use the automatic app_name generation based on the workspace name, but want to add a suffix to the app name (like 'production', 'pre-production', 'preview', etc.)"
   config_file_path:
