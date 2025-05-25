@@ -7,7 +7,7 @@ apt-get install -y \
         git \
         pwgen
 EOF
-COPY --from=flyio/flyctl:latest /flyctl /usr/local/bin/flyctl
+COPY --from=flyio/flyctl /flyctl /usr/local/bin/flyctl
 
 WORKDIR /action
 
