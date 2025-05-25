@@ -25,7 +25,7 @@ source "$__dirname/lib/retry.sh"
 process_inputs
 
 # Some sanity checks.
-# If those output variables are empty, we exit with an error, since we can't proceed.
+# If those output variables are empty, we exit with an error, since we can't proceed anyways.
 if [[
      -z "$WORKSPACE_NAME"
   || -z "$WORKSPACE_PATH_RELATIVE"
@@ -34,7 +34,6 @@ if [[
   || -z "$APP_NAME"
   || -z "$CONFIG_FILE_PATH"
   || -z "$ATTACH_CONSUL"
-  || -z "$ATTACH_POSTGRES"
   || -z "$USE_ISOLATED_WORKSPACE"
   || -z "$PRIVATE"
   ]]; then
@@ -67,64 +66,6 @@ if [[ "$ATTACH_CONSUL" == "true" ]]; then
   retry 3 3 "Attaching a consul cluster to $APP_NAME" $fly_consul_attach_command
 fi
 
-# Attaching an existing postgres cluster if requested takes precedence over creating a new one with a generated name.
-if [[ -n "$ATTACH_EXISTING_POSTGRES" ]]; then
-
-  # First check if the postgres cluster was already attached to the app by checking if the DATABASE_URL secret is set.
-  if ! flyctl secrets list --app $APP_NAME | grep "DATABASE_URL" > /dev/null 2>&1; then
-    notice "Postgres cluster '$ATTACH_EXISTING_POSTGRES' not attached yet to '$APP_NAME' (no 'DATABASE_URL' secret set). Attaching it now."
-    declare -rg fly_postgres_attach_command="flyctl postgres attach $ATTACH_EXISTING_POSTGRES --app $APP_NAME --yes"
-    retry 3 3 "Attaching '$ATTACH_EXISTING_POSTGRES' postgres cluster to $APP_NAME" $fly_postgres_attach_command
-  else
-    notice "Postgres cluster '$ATTACH_EXISTING_POSTGRES' already attached to '$APP_NAME'. Skipping attaching. If you previously had a different postgres cluster attached, please manually remove the 'DATABASE_URL' secret from '$APP_NAME' and then re-run this action."
-  fi
-
-  notice "postgres_cluster_name=$ATTACH_EXISTING_POSTGRES"
-  echo "postgres_cluster_name=$ATTACH_EXISTING_POSTGRES" >> $GITHUB_OUTPUT
-
-# Attaching an existing postgres cluster takes precedence over creating a new one with a generated name.
-# Thats why its in the else branch.
-elif [[ "$ATTACH_POSTGRES" == "true" ]]; then
-
-  if ! does_fly_app_exist "$ATTACH_POSTGRES_NAME"; then
-      notice "Postgres cluster '$ATTACH_POSTGRES_NAME' does not exist. Creating it now."
-      # Create a new "development" postgres cluster.
-      declare -rg fly_postgres_create_command="flyctl postgres create \
-        --org $FLY_ORG \
-        --region $FLY_REGION \
-        --autostart \
-        --name $ATTACH_POSTGRES_NAME \
-        --vm-size shared-cpu-1x \
-        --volume-size 1 \
-        --initial-cluster-size 1 \
-        --password $(pwgen -1 -cnsB 40)"
-      retry 3 3 "Creating Fly Postgres Cluster '$ATTACH_POSTGRES_NAME'" $fly_postgres_create_command
-
-      # There is currently a bug/missing cli flag in flyctl which
-      # does not allow to create a development cluster which scales to zero after 1h. see: https://github.com/superfly/flyctl/issues/4172
-      # Thats the workaround we are using here. We update the postgres machine to auto start and auto stop, assuming that there is only
-      # one postgres machine in the cluster.
-      declare -rg fly_postgres_attach_machine_id=$(flyctl machines list --app $ATTACH_POSTGRES_NAME --json | jq -r '.[].id')
-      notice "Updating Postgres machines '$fly_postgres_attach_machine_id' to auto start and auto stop"
-      declare -rg fly_postgres_update_command="flyctl machines update --autostop=suspend --autostart $fly_postgres_attach_machine_id --app $ATTACH_POSTGRES_NAME --yes"
-      retry 3 3 "Updating Postgres machines to auto start and auto stop" $fly_postgres_update_command || true # we dont care if the update command fails. But i should probably add a warning or some output.
-  fi
-
-  # Now we know the postgres cluster exists, we can attach it to the app if neccessary.
-  if ! flyctl secrets list --app $APP_NAME | grep "DATABASE_URL" > /dev/null 2>&1; then
-    notice "Postgres cluster '$ATTACH_POSTGRES_NAME' not attached yet to '$APP_NAME' (no 'DATABASE_URL' secret set). Attaching it now."
-    declare -rg fly_postgres_attach_command="flyctl postgres attach $ATTACH_POSTGRES_NAME --app $APP_NAME --yes"
-    retry 3 3 "Attaching '$ATTACH_POSTGRES_NAME' postgres cluster to $APP_NAME" $fly_postgres_attach_command || true
-  else
-    notice "Postgres cluster '$ATTACH_POSTGRES_NAME' already attached to '$APP_NAME'. Skipping attaching. If you previously had a different postgres cluster attached, please manually remove the 'DATABASE_URL' secret from '$APP_NAME' and then re-run this action."
-  fi
-
-  notice "postgres_cluster_name=$ATTACH_POSTGRES_NAME"
-  echo "postgres_cluster_name=$ATTACH_POSTGRES_NAME" >> $GITHUB_OUTPUT
-
-fi
-
-
 if [[ "$USE_ISOLATED_WORKSPACE" == "true" ]]; then
   notice "Setting current working directory to '$WORKSPACE_PATH_RELATIVE' (effectively: '$WORKSPACE_PATH')"
   cd "$WORKSPACE_PATH"
@@ -143,7 +84,7 @@ if [[ -n "$BUILD_SECRETS_ARGUMENTS" ]]; then
 fi
 
 if [[ "$PRIVATE" == "true" ]]; then
-  notice "Will deploy as private flycast app. The app will not be reachable from the internet."
+  notice "Will deploy as private flycast app. The app will not be reachable from the internet, without a WireGuard connection to the flycast network."
 fi
 
 declare -rg fly_deploy_command="flyctl deploy \

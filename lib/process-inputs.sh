@@ -5,11 +5,15 @@ process_inputs () {
   # Enable globstar to allow ** globs which is needed in this function
   shopt -s globstar
 
+  # When workspace_name is not set, we assume the current "root" directory of the repository is the workspace_path
+  # and we use the "name" from the package.json in that directory as workspace_name.
   if [[ -z "$INPUT_WORKSPACE_NAME" ]]; then
     notice "workspace_name not set. Using current directory as workspace_path and 'name' from ./package.json as workspace_name"
     local workspace_path_relative="."
     local workspace_path="$(pwd)"
     local workspace_name="$(jq -rS '.name' ./package.json)"
+
+  # When workspace_name is set, we search in any package.json for the given name and use the directory of that package.json as workspace_path.
   else
     local found_workspace="$(grep -rls "\"name\":.*\"$INPUT_WORKSPACE_NAME\"" **/package.json | xargs -I {} dirname {})"
     if [[ -z "$found_workspace" ]]; then
@@ -29,37 +33,55 @@ process_inputs () {
   debug "GITHUB_REF_TYPE=$GITHUB_REF_TYPE"
   debug "GITHUB_REF_NAME=$GITHUB_REF_NAME"
   debug "GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH"
-  debug "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
   debug "GITHUB_SHA=$GITHUB_SHA"
-  debug "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
 
-  # GITHUB_REPOSITORY is the full owner and repository in the form of "owner/repository-name"
-  local default_app_name_prefix="${GITHUB_REPOSITORY}"
-
-  # If the workspace is in the root of the repository, use only the repository owner part as prefix instead of owner/repository
-  # This is to avoid conflicts with the package.json name and the repository owner/repository name
-  if [[ "${workspace_path_relative}" == "." ]]; then
-    default_app_name_prefix="${GITHUB_REPOSITORY_OWNER}"
+  # Handle if the user wants to set a custom prefix (like $GITHUB_REPOSITORY_OWNER or $GITHUB_REPOSITORY) for the app name
+  local default_app_name_prefix=""
+  if [[ -n "${INPUT_APP_NAME_PREFIX,,}" ]]; then
+    default_app_name_prefix="${INPUT_APP_NAME_PREFIX,,}"
   fi
+  debug "default_app_name_prefix=$default_app_name_prefix"
 
   if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
     local pr_number=$(jq -r .number $GITHUB_EVENT_PATH)
-    local default_app_name="${default_app_name_prefix}-${workspace_name}-pr-${pr_number}"
+    local default_app_name="${workspace_name}-pr-${pr_number}"
   elif [[ "${GITHUB_EVENT_NAME}" == "push" || "${GITHUB_EVENT_NAME}" == "create" ]]; then
-    local default_app_name="${default_app_name_prefix}-${workspace_name}-${GITHUB_REF_TYPE}-${GITHUB_REF_NAME}"
+    # <workspace_name>-<ref_type>-<ref_name>
+    # e.g. base-stack-branch-bug/some-bugfix
+    # e.g. base-stack-branch-main
+    # e.g. base-stack-tag-v1.0.0
+    local default_app_name="${workspace_name}-${GITHUB_REF_TYPE}-${GITHUB_REF_NAME}"
   else
-    warning "Unhandled GITHUB_EVENT_NAME '${GITHUB_EVENT_NAME}'. Considering setting 'app_name' as input."
-    local default_app_name="${default_app_name_prefix}-${workspace_name}-${GITHUB_EVENT_NAME}"
+    if [[ -z "$INPUT_APP_NAME" ]]; then
+      # If no app_name is set, we show a warning that even is unhandled and generated default app_name might not be what the user expects.
+      warning "Unhandled GITHUB_EVENT_NAME '${GITHUB_EVENT_NAME}'. Considering setting 'app_name' as input."
+    fi
+    local default_app_name="${workspace_name}-${GITHUB_EVENT_NAME}"
+  fi
+
+  # If the user has set a prefix for the app name, we prepend it to the default app name.
+  if [[ -n "$default_app_name_prefix" ]]; then
+    default_app_name="${default_app_name_prefix}-${default_app_name}"
   fi
   debug "default_app_name=$default_app_name"
 
   local raw_app_name="${INPUT_APP_NAME:-$default_app_name}"
+  # Just a sanity check that we have any value for raw_app_name, should not happen at this point, but better safe than sorry.
   if [[ -z "$raw_app_name" ]]; then
     error "Default for 'app_name' could not be generated for github event '${GITHUB_EVENT_NAME}'. Please set 'app_name' as input."
     return 1
   fi
 
+  # Replace all dots, slashes and underscores with dashes, remove all other non-alphanumeric characters and convert to lowercase.
+  # This is needed to ensure the app_name is valid for Fly.io and does not contain any invalid characters.
+  # In the end app_name needs to be a valid URL subdomain: <app_name>.fly.dev
+  # for example:
+  # base-stack-tag-v1.0.0 gets converted to base-stack-tag-v1-0-0
+  # base-stack-branch-bug/some-bugfix gets converted to base-stack-branch-bug-some-bugfix
   local app_name="$(echo $raw_app_name | sed 's/[\.\/_]/-/g; s/[^a-zA-Z0-9-]//g' | tr '[:upper:]' '[:lower:]')"
+
+  # Sanity check if the final app_name contains the pull request number when the event is a pull request.
+  # This is needed to ensure the app_name is unique for each pull request and does not conflict with other branches or tags.
   if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
     local pr_number=$(jq -r .number $GITHUB_EVENT_PATH)
     debug "pr_number=$pr_number"
@@ -70,6 +92,7 @@ process_inputs () {
   fi
   debug "app_name=$app_name"
 
+  # config file path is relative to the workspace_path, so we need to resolve it to an absolute path.
   if [[ -z "$INPUT_CONFIG_FILE_PATH" ]]; then
     notice "config_file_path NOT set. Using workspace_path='$workspace_path' and 'fly.toml' as default."
     local raw_config_file_path="$workspace_path/fly.toml"
@@ -77,6 +100,7 @@ process_inputs () {
     local raw_config_file_path="$workspace_path/$INPUT_CONFIG_FILE_PATH"
   fi
 
+  # realpath -e resolves the path to an absolute path and actually checks if the file really exists, not just if the path is valid.
   local config_file_path="$(realpath -e "$raw_config_file_path")"
   if [[ -z "$config_file_path" ]]; then
     error "Could not resolve config_file_path: '$raw_config_file_path'"
@@ -87,19 +111,16 @@ process_inputs () {
   if [ "${GITHUB_EVENT_NAME}" == "pull_request" ]; then
     local pr_event_type=$(jq -r .action $GITHUB_EVENT_PATH)
     if [[ "$pr_event_type" == "closed" ]]; then
-      error "PR closed event not supported by this action yet."
+      error "PR closed event not supported by this action. Use 'https://github.com/forge-42/fly-destroy' action instead."
       exit 1
     fi
     local pull_request_head_sha=$(jq -r .pull_request.head.sha $GITHUB_EVENT_PATH)
+    # We need the HEAD commit SHA of the pull request, which is the commit that is being tested in the pull request.
     local git_commit_sha="${pull_request_head_sha}"
   else
     local git_commit_sha="${GITHUB_SHA}"
   fi
   debug "git_commit_sha=$git_commit_sha"
-
-  git config --global --add safe.directory $GITHUB_WORKSPACE
-  local git_commit_sha_short="$(git rev-parse --short $git_commit_sha)"
-  debug "git_commit_sha_short=$git_commit_sha_short"
 
   if [[ "${INPUT_ATTACH_CONSUL,,}" != "true" ]]; then
     local attach_consul="false"
@@ -107,19 +128,8 @@ process_inputs () {
     local attach_consul="true"
   fi
 
-  # If no postgres attach is requested, we default to false
-  local attach_existing_postgres=""
-  local attach_postgres="false"
-  local attach_postgres_name=""
-
-  # Attaching an existing postgres cluster takes precedence over creating a new one
-  if [[ -n "$INPUT_ATTACH_EXISTING_POSTGRES" ]]; then
-    attach_existing_postgres="${INPUT_ATTACH_EXISTING_POSTGRES,,}" # lowercase postgres fly app name
-  elif [[ "${INPUT_ATTACH_POSTGRES,,}" == "true" ]]; then
-    attach_postgres="true"
-    attach_postgres_name="${app_name,,}-postgres"
-  fi
-
+  # Isolated workspace is used if your actual deployment is in a subdirectory of the repository and should
+  # be treated as a separate workspace. This is useful for docs, or example apps that are in a subdirectory of the repository.
   if [[ -z "$INPUT_USE_ISOLATED_WORKSPACE" ]]; then
     local use_isolated_workspace="false"
   else
@@ -184,6 +194,7 @@ process_inputs () {
   local pnpm_version=$(truncate_semver $(jq -r '.engines.pnpm // ""' $package_json_path))
   local yarn_version=$(truncate_semver $(jq -r '.engines.yarn // ""' $package_json_path))
   local turbo_version=$(truncate_semver $(jq -r '.devDependencies.turbo // ""' $package_json_path))
+  local nx_version=$(truncate_semver $(jq -r '.dependencies.nx // ""' $package_json_path))
 
   local build_args_arguments=""
   if [[ -n "$node_version" ]]; then
@@ -201,11 +212,15 @@ process_inputs () {
   if [[ -n "$turbo_version" ]]; then
     build_args_arguments+="--build-arg TURBO_VERSION=$turbo_version "
   fi
+  if [[ -n "$nx_version" ]]; then
+    build_args_arguments+="--build-arg NX_VERSION=$nx_version "
+  fi
 
+  # This is not the fly.io app name. The user might want to use this for other purposes, whenever they need a unique identifier for the app during the build.
+  build_args_arguments+="--build-arg APP_NAME=$app_name "
   build_args_arguments+="--build-arg WORKSPACE_NAME=$workspace_name "
   build_args_arguments+="--build-arg WORKSPACE_PATH=$workspace_path_relative "
   build_args_arguments+="--build-arg GIT_COMMIT_SHA=$git_commit_sha "
-  build_args_arguments+="--build-arg GIT_COMMIT_SHA_SHORT=$git_commit_sha_short "
 
   if [[ -n "$INPUT_BUILD_ARGS" ]]; then
     local build_args="$(echo "$INPUT_BUILD_ARGS" | tr '\n' ' ' | tr -s '[:space:]' ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
@@ -271,9 +286,6 @@ process_inputs () {
   declare -rg ATTACH_CONSUL="$attach_consul"
   declare -rg PRIVATE="$private"
   declare -rg PRIVATE_ARGUMENTS="$private_arguments"
-  declare -rg ATTACH_POSTGRES="$attach_postgres"
-  declare -rg ATTACH_POSTGRES_NAME="$attach_postgres_name"
-  declare -rg ATTACH_EXISTING_POSTGRES="$attach_existing_postgres"
   declare -rg SECRETS="$secrets"
   declare -rg SECRETS_COUNT="$secrets_count"
   declare -rg SECRETS_NAMES="$secrets_names"
@@ -307,9 +319,6 @@ process_inputs () {
   debug "ATTACH_CONSUL=$ATTACH_CONSUL"
   debug "PRIVATE=$PRIVATE"
   debug "PRIVATE_ARGUMENTS=$PRIVATE_ARGUMENTS"
-  debug "ATTACH_POSTGRES=$ATTACH_POSTGRES"
-  debug "ATTACH_POSTGRES_NAME=$ATTACH_POSTGRES_NAME"
-  debug "ATTACH_EXISTING_POSTGRES=$ATTACH_EXISTING_POSTGRES"
   debug "USE_ISOLATED_WORKSPACE=$USE_ISOLATED_WORKSPACE"
   debug "CONFIG_FILE_PATH=$CONFIG_FILE_PATH"
 
