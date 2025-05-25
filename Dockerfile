@@ -5,7 +5,7 @@ apt-get update -qq
 apt-get install -y \
         jq
 EOF
-COPY --from=flyio/flyctl /flyctl /usr/local/bin/flyctl
+COPY --from=flyio/flyctl:latest /flyctl /usr/local/bin/flyctl
 
 WORKDIR /action
 
