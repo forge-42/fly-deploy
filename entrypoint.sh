@@ -88,13 +88,15 @@ if [[ "$PRIVATE" == "true" ]]; then
 fi
 
 declare -rg fly_deploy_command="flyctl deploy \
-    --deploy-retries=3 \
+    --deploy-retries=$FLY_DEPLOY_RETRIES \
     --config $CONFIG_FILE_PATH \
     --app $APP_NAME \
     $ENV_VARS_ARGUMENTS \
     $BUILD_ARGS_ARGUMENTS \
     $BUILD_SECRETS_ARGUMENTS \
     $PRIVATE_ARGUMENTS \
+    $DEPLOY_STRATEGY_ARGUMENT \
+    $DEPLOY_WAIT_TIMEOUT_ARGUMENT \
     --remote-only \
     --yes"
 

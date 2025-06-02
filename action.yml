@@ -40,6 +40,12 @@ inputs:
     required: false
     description: "Boolean string (true|false) to indicate whether to enable flycast and only add a private IPv6 address to the app. Defaults to false."
     default: "false"
+  wait_timeout:
+    required: false
+    description: "Time duration in minutes to wait for individual machines to transition states and become healthy. If ommited, the fly deploy command will use its default timeout for --wait-timeout."
+  deploy_immediately:
+    required: false
+    description: "Boolean string (true|false) indicating whether to use the 'immediate' deploy strategy. If omitted, the fly deploy command will use its default deploy strategy. Defaults to false."
 outputs:
   app_name:
     description: "The name of the fly app that was deployed."

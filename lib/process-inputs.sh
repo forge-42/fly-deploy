@@ -287,6 +287,16 @@ process_inputs () {
   build_secrets_arguments="${build_secrets_arguments% }"
   debug "build_secrets_arguments=$build_secrets_arguments"
 
+  local deploy_wait_timeout_argument=""
+  if [[ "$INPUT_DEPLOY_WAIT_TIMEOUT" =~ ^[0-9]+$ ]];then
+    deploy_wait_timeout_argument="--wait-timeout ${INPUT_DEPLOY_WAIT_TIMEOUT}m"
+  fi
+
+  local deploy_strategy_argument=""
+  if [[ "${INPUT_DEPLOY_IMMEDIATELY,,}" == "true" ]];then
+    deploy_strategy_argument="--strategy immediate"
+  fi
+
   # Disable globstar again to avoid problems with the ** glob
   shopt -u globstar
 
@@ -314,6 +324,9 @@ process_inputs () {
   declare -rg BUILD_SECRETS_ARGUMENTS="$build_secrets_arguments"
   declare -rg USE_ISOLATED_WORKSPACE="$use_isolated_workspace"
   declare -rg CONFIG_FILE_PATH="$config_file_path"
+  declare -rg DEPLOY_WAIT_TIMEOUT_ARGUMENT="$deploy_wait_timeout_argument"
+  declare -rg DEPLOY_STRATEGY_ARGUMENT="$deploy_strategy_argument"
+  declare -rg FLY_DEPLOY_RETRIES="3"
 
   debug "WORKSPACE_NAME=$WORKSPACE_NAME"
   debug "WORKSPACE_PATH=$WORKSPACE_PATH"
@@ -335,6 +348,9 @@ process_inputs () {
   debug "PRIVATE_ARGUMENTS=$PRIVATE_ARGUMENTS"
   debug "USE_ISOLATED_WORKSPACE=$USE_ISOLATED_WORKSPACE"
   debug "CONFIG_FILE_PATH=$CONFIG_FILE_PATH"
+  debug "DEPLOY_WAIT_TIMEOUT_ARGUMENT=$DEPLOY_WAIT_TIMEOUT_ARGUMENT"
+  debug "DEPLOY_STRATEGY_ARGUMENT=$DEPLOY_STRATEGY_ARGUMENT"
+  debug "FLY_DEPLOY_RETRIES=$FLY_DEPLOY_RETRIES"
 
   group_end
 }
